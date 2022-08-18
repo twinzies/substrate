@@ -57,11 +57,6 @@ pub mod pallet {
 
 		type VoteQty: Get<u64>;
 
-		// Interface decision for Yay / Nay votes left upto implementer.
-		type VoteYay: Eq;
-
-		type VoteNay: Eq;
-
 		/// The minimum time a proposal must be alive before being called.
 		#[pallet::constant]
 		type MinTime: Get<u32>;
