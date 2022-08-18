@@ -16,23 +16,22 @@ use frame_support::{
 	},
 };
 
-use pallet_identity::IdentityField;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 pub use pallet::*;
 type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
-/// Interface required for identity verification.
-pub trait IdentityVerifier<AccountId> {
-	/// Function that returns whether an account has an identity registered with the identity provider.
-	fn has_identity(who: &AccountId, fields: u64) -> bool;
-}
-
 #[derive(Copy, Clone, PartialEq, Eq, RuntimeDebug, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub enum Vote{
+pub enum VoteTypes{
 	Aye,
 	Nay,
 	Abstain,
+}
+
+/// Interface for identity verification.
+pub trait VerifiedVoter<AccountId> {
+	/// Function that returns whether an account has an identity registered with the identity provider.
+	fn has_identity(&self, who: &AccountId, IdProof: u64) -> bool;
 }
 
 #[frame_support::pallet]
@@ -45,6 +44,9 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The identity verifier of a voter.
+		type Voter: VerifiedVoter<Self::AccountId>;
 
 		/// The currency trait.
 		type Currency: ReservableCurrency<Self::AccountId>;
@@ -67,6 +69,9 @@ pub mod pallet {
 
 		/// Running count of a proposal
 		type Count: Get<u64>;
+
+		// Weight information for extrinsics in this pallet.
+		// todo!: define weights type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::pallet]
@@ -82,6 +87,37 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {}
+
+	/// Lazy implementation for tests.
+	impl<AccountId> dyn VerifiedVoter<AccountId> {
+		fn create_identity(&self, who: &AccountId, IdProof: u64) -> bool{
+			// todo: if AccountId exists in StorageMap, return true
+			true
+		}
+		fn has_identity(&self, who: &AccountId, IdProof: u64) -> bool {
+			// todo: if AccountId exists in StorageMap, return true
+			true
+		}
+	}
+
+	pub trait Voter<AccountId, Proposal, VoteIndex, VoteQty> {
+		fn create_proposal(
+			who: AccountId,
+			proposal: Box<Proposal>,
+		) -> Result<VoteIndex, DispatchError>;
+
+		fn vote_proposal(
+			who: AccountId,
+			proposal: VoteIndex,
+			vote: VoteTypes,
+			voteQty: VoteQty,
+		) -> Result<bool, DispatchError>;
+
+		fn close_proposal(
+			who: AccountId,
+			proposal: VoteIndex,
+		) -> Result<bool, DispatchError>;
+	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
