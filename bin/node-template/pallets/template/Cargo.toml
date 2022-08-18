@@ -20,6 +20,7 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 frame-benchmarking = { version = "4.0.0-dev", default-features = false, optional = true, path = "../../../../frame/benchmarking" }
 frame-support = { version = "4.0.0-dev", default-features = false, path = "../../../../frame/support" }
 frame-system = { version = "4.0.0-dev", default-features = false, path = "../../../../frame/system" }
+pallet-identity = { version = "4.0.0-dev", path = "../../../../frame/identity", default-features = false }
 
 [dev-dependencies]
 sp-core = { version = "6.0.0", default-features = false, path = "../../../../primitives/core" }
@@ -34,6 +35,11 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"scale-info/std",
+	"pallet-identity/std",
 ]
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"pallet-identity/runtime-benchmarks"
+]
+
 try-runtime = ["frame-support/try-runtime"]
