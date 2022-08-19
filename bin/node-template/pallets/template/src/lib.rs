@@ -28,12 +28,6 @@ pub enum VoteTypes{
 	Abstain,
 }
 
-/// Interface for identity verification.
-pub trait VerifiedVoter<AccountId> {
-	/// Function that returns whether an account has an identity registered with the identity provider.
-	fn has_identity(&self, who: &AccountId, IdProof: u64) -> bool;
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
@@ -45,9 +39,6 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// The identity verifier of a voter.
-		type Voter: VerifiedVoter<Self::AccountId>;
-
 		/// The currency trait.
 		type Currency: ReservableCurrency<Self::AccountId>;
 
@@ -55,7 +46,7 @@ pub mod pallet {
 		type ForceOrigin: EnsureOrigin<Self::Origin>;
 
 		// The VoteIndex assigned to a proposal upon creation.
-		type VoteIndex: Get<u64>;
+		type VoteIndex: Get<u64> + Clone;
 
 		type VoteQty: Get<u64>;
 
@@ -74,6 +65,17 @@ pub mod pallet {
 		// todo!: define weights type WeightInfo: WeightInfo;
 	}
 
+	/// Struct for a Vote
+	// pub struct Vote{}
+	// 	voter: u64, // Should be AccountId but it is impossible to do simple things in here.
+	// 	vote: VoteTypes,
+	// 	qty: u64,
+	// }
+	/// The lookup table for all proposals
+	#[pallet::storage]
+	pub(super) type AllProposals<T: Config> =
+		StorageMap<_, Blake2_256, T::VoteIndex, T::Count>;
+
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
@@ -82,53 +84,51 @@ pub mod pallet {
 	// https://docs.substrate.io/main-docs/build/events-errors/
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {}
+	pub enum Event<T: Config> {
+		/// A Proposal was created.
+		ProposalCreated,
+		/// A vote was cast. 
+		VoteCast,
+		/// A proposal was called and funds released.
+		ProposalCalled,
+	}
 
 	// Errors inform users that something went wrong.
 	#[pallet::error]
-	pub enum Error<T> {}
-
-	/// Lazy implementation for tests.
-	impl<AccountId> dyn VerifiedVoter<AccountId> {
-		fn create_identity(&self, who: &AccountId, IdProof: u64) -> bool{
-			// todo: if AccountId exists in StorageMap, return true
-			true
-		}
-		fn has_identity(&self, who: &AccountId, IdProof: u64) -> bool {
-			// todo: if AccountId exists in StorageMap, return true
-			true
-		}
-	}
-
-	pub trait Voter<AccountId, Proposal, VoteIndex, VoteQty> {
-		fn create_proposal(
-			who: AccountId,
-			proposal: Box<Proposal>,
-		) -> Result<VoteIndex, DispatchError>;
-
-		fn vote_proposal(
-			who: AccountId,
-			proposal: VoteIndex,
-			vote: VoteTypes,
-			voteQty: VoteQty,
-		) -> Result<bool, DispatchError>;
-
-		fn close_proposal(
-			who: AccountId,
-			proposal: VoteIndex,
-		) -> Result<bool, DispatchError>;
+	pub enum Error<T> {
+		GeneralError,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	// These functions materialize as "extrinsics", which are often compared to transactions.
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(0)]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			// write logic here
+		pub fn create_proposal(origin: OriginFor<T>, proposal: Vec<u8>) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			// Take ProposalFee.
+			// Insert proposal into storage
+			// Hash the proposal and return as VoteIndex
+			Self::deposit_event(Event::<T>::ProposalCreated);
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn cast_vote(origin: OriginFor<T>, proposal: u64, vote: VoteTypes, qty: u64) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			// Check if AccountId has adequate balance.
+			// insert into storage the qty and type (Aye / Nay) of votes.
+			Self::deposit_event(Event::<T>::VoteCast);
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn call_proposal(origin: OriginFor<T>, proposal: u64) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			// ensure the sender AccountId is the creator of the proposal.
+			Self::deposit_event(Event::<T>::ProposalCalled);
 			Ok(())
 		}
 	}
