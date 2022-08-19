@@ -28,6 +28,12 @@ pub enum VoteTypes{
 	Abstain,
 }
 
+/// Interface for identity verification.
+pub trait VerifiedVoter<AccountId> {
+	/// Function that returns whether an account has an identity registered with the identity provider.
+	fn has_identity(&self, who: &AccountId, IdProof: u64) -> bool;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
@@ -38,6 +44,9 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The identity verifier of a voter.
+		type Voter: VerifiedVoter<Self::AccountId>;
 
 		/// The currency trait.
 		type Currency: ReservableCurrency<Self::AccountId>;
@@ -97,6 +106,37 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		GeneralError,
+	}
+
+	/// Lazy implementation for tests.
+	impl<AccountId> dyn VerifiedVoter<AccountId> {
+		fn create_identity(&self, who: &AccountId, IdProof: u64) -> bool{
+			// todo: if AccountId exists in StorageMap, return true
+			true
+		}
+		fn has_identity(&self, who: &AccountId, IdProof: u64) -> bool {
+			// todo: if AccountId exists in StorageMap, return true
+			true
+		}
+	}
+
+	pub trait Voter<AccountId, Proposal, VoteIndex, VoteQty> {
+		fn create_proposal(
+			who: AccountId,
+			proposal: Box<Proposal>,
+		) -> Result<VoteIndex, DispatchError>;
+
+		fn vote_proposal(
+			who: AccountId,
+			proposal: VoteIndex,
+			vote: VoteTypes,
+			voteQty: VoteQty,
+		) -> Result<bool, DispatchError>;
+
+		fn close_proposal(
+			who: AccountId,
+			proposal: VoteIndex,
+		) -> Result<bool, DispatchError>;
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
